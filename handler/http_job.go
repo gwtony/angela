@@ -39,34 +39,36 @@ func (h *JobCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	data := &CronMessage{}
+	data := &OrchMessage{}
+
 	err = json.Unmarshal(result, &data)
 	if err != nil {
 		api.ReturnError(r, w, errors.Jerror("Parse from body failed"), errors.BadRequestError, h.log)
 		return
 	}
-	h.log.Info("Add record request: (%s) from client: %s", string(result), r.RemoteAddr)
+	h.log.Info("Create job request: (%s) from client: %s", string(result), r.RemoteAddr)
 
-	//TODO: check cron format
-	if data.Cron == "" {
-		h.log.Info("Not found cron")
-		api.ReturnError(r, w, errors.Jerror("No cron in data"), errors.BadRequestError, h.log)
+	if len(data.Nodes) <= 0 {
+		h.log.Info("Not found nodes")
+		api.ReturnError(r, w, errors.Jerror("No nodes in data"), errors.BadRequestError, h.log)
 		return
 	}
+	//TODO: check args
 
-	if r.Header[ADMIN_TOKEN_HEADER] != nil {
-		if (strings.Compare(r.Header[ADMIN_TOKEN_HEADER][0], AdminToken) != 0) {
-			h.log.Info("Job add admin token invalid")
-			api.ReturnError(r, w, errors.Jerror("Admin token unauthorized"), errors.UnauthorizedError, h.log)
-			return
-		}
-		admin = true
-	}
+	//if r.Header[ADMIN_TOKEN_HEADER] != nil {
+	//	if (strings.Compare(r.Header[ADMIN_TOKEN_HEADER][0], AdminToken) != 0) {
+	//		h.log.Info("Job add admin token invalid")
+	//		api.ReturnError(r, w, errors.Jerror("Admin token unauthorized"), errors.UnauthorizedError, h.log)
+	//		return
+	//	}
+	//	admin = true
+	//}
 
 	jobid, _ := utils.NewUUID()
 
-	im := &IdMessage{Jobid: data.Jobid}
-	imv, _ := json.Marshal(im)
+	//im := &IdMessage{Jobid: data.Jobid}
+	//imv, _ := json.Marshal(im)
+	go Runjob()
 
 	api.ReturnResponse(r, w, string(imv), h.log)
 }

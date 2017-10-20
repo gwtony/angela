@@ -9,18 +9,20 @@ import (
 	"strings"
 	"time"
 	"github.com/gwtony/angela/ssh"
+	"github.com/gwtony/gapi/log"
 )
 
-func RunJob(jobObj m.JJob) bool {
+func RunJob(job OrchMessage, log log.Log) bool {
 
-	if jobObj.Callback != "" {
-		startJobCallback(jobObj)
+	if job.Callback != "" {
+		//startJobCallback(jobObj)
+		//TODO: call or not
 	}
 
-	defer finishJobCallback(jobObj)
+	defer ReportJobCallback(job)
 
-	concurrency := g.MAX_CONCURRENT
-	if jobObj.Parallel <= 0 {
+	concurrency := MAX_CONCURRENT
+	if job.Parallel <= 0 {
 		concurrency = 1
 	}
 
@@ -33,33 +35,33 @@ func RunJob(jobObj m.JJob) bool {
 		}
 	}(g.Config().Debug, tmpFile)
 
-	werr := ioutil.WriteFile(tmpFile, []byte(jobObj.Command), 0644)
+	werr := ioutil.WriteFile(tmpFile, []byte(job.Command), 0644)
 	if werr != nil {
-		log.Println("Save JobCommand To File Fail!", tmpFile, werr)
-		for _, node := range jobObj.Nodes {
-			updateJobNodeState(jobObj.Jobid, node, g.JOB_FAIL_STR, -1)
-			updateJobNodeOutput(jobObj.Jobid, node, "", "Save JobCommand To TmpFile Fail", time.Now(), time.Now())
+		//log.Println("Save JobCommand To File Fail!", tmpFile, werr)
+		for _, node := range job.Nodes {
+			updateJobNodeState(job.Jobid, node, g.JOB_FAIL_STR, -1)
+			updateJobNodeOutput(job.Jobid, node, "", "Save job command to tmpfile fail", time.Now(), time.Now())
 		}
 		return false
 	}
 
 	//run command
 	sem := make(chan bool, concurrency)
-	for _, node := range jobObj.Nodes {
+	for _, node := range job.Nodes {
 		sem <- true
 
-		go func(node string, jobid string, execuser string, timeout int) {
+		go func(node string, jobid string, user string, timeout int) {
 			defer func() { <-sem }()
 
-			if g.Config().Debug {
-				log.Printf("concurrentcy pools length: %v, capability:%v\n", len(sem), cap(sem))
-			}
+			//if g.Config().Debug {
+			//	log.Printf("concurrentcy pools length: %v, capability:%v\n", len(sem), cap(sem))
+			//}
 
 			//update node to running
 			updateJobNodeState(jobid, node, g.JOB_RUNNING_STR, 0)
 
 			//run command
-			rc, isTout := executeCmd(jobid, node, execuser, tmpFile, timeout)
+			rc, isTout := executeCmd(jobid, node, user, tmpFile, timeout)
 
 			execState := g.JOB_SUCC_STR
 			if rc != 0 {
@@ -69,9 +71,9 @@ func RunJob(jobObj m.JJob) bool {
 				execState = g.JOB_TIMEOUT_STR
 			}
 
-			updateJobNodeState(jobObj.Jobid, node, execState, rc)
+			updateJobNodeState(job.Jobid, node, execState, rc)
 
-		}(node, jobObj.Jobid, jobObj.User, jobObj.Timeout)
+		}(node, job.Jobid, job.User, job.Timeout)
 	}
 
 	//release concurrency
@@ -82,7 +84,7 @@ func RunJob(jobObj m.JJob) bool {
 	return true
 }
 
-func executeCmd(jobid, node, execuser, tmpfile string, timeout int) (rcInt int, isTout bool) {
+func executeCmd(jobid, node, user, tmpfile string, timeout int) (rcInt int, isTout bool) {
 	if execuser == "" {
 		return -1, true
 	}
@@ -90,38 +92,38 @@ func executeCmd(jobid, node, execuser, tmpfile string, timeout int) (rcInt int, 
 		User:   "root",
 		Server: node,
 		Key:    g.Config().Sshkey,
-		Port:   "26387",
+		Port:   "22",
 	}
 
-	if g.Config().Debug {
-		log.Println("=======>ssh msg is:", node, g.Config().Sshkey)
+	//if g.Config().Debug {
+	//	log.Println("=======>ssh msg is:", node, g.Config().Sshkey)
 
-		ssh = &easyssh.MakeConfig{
-			User:     "root",
-			Server:   node,
-			Password: "123qwe",
-			Port:     "22",
-		}
-	}
+	//	ssh = &easyssh.MakeConfig{
+	//		User:     "root",
+	//		Server:   node,
+	//		Password: "123qwe",
+	//		Port:     "22",
+	//	}
+	//}
 
-	_, _, _, derr := ssh.Run("mkdir /tmp/lj-orchestration-run", 60)
-	if derr != nil {
+	_, _, _, err := ssh.Run("mkdir /tmp/orch-run", 60)
+	if err != nil {
 		updateJobNodeOutput(jobid, node, "", derr.Error(), time.Now(), time.Now())
 		return -1, true
 	}
 
 	//scp command file
-	remoteFile := "/tmp/lj-orchestration-run/" + jobid + ".comm"
-	serr := ssh.Scp(tmpfile, remoteFile)
-	if serr != nil {
+	remoteFile := "/tmp/orch-run/" + jobid + ""
+	err := ssh.Scp(tmpfile, remoteFile)
+	if err != nil {
 		updateJobNodeOutput(jobid, node, "", serr.Error(), time.Now(), time.Now())
 		return -1, true
 	}
 
 	//get script shell，default is "bash -l", act as a login shell
 	shellCmd := "bash -l "
-	f, cerr := os.Open(tmpfile)
-	if cerr != nil {
+	f, err := os.Open(tmpfile)
+	if err != nil {
 		updateJobNodeOutput(jobid, node, "", serr.Error(), time.Now(), time.Now())
 		return -1, true
 	}
