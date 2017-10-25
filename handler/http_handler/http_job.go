@@ -1,31 +1,41 @@
-package handler
+package http_handler
 import (
 	//"fmt"
-	"time"
-	"strings"
-	"strconv"
+	//"time"
+	//"strings"
+	//"strconv"
 	"io/ioutil"
 	"encoding/json"
 	"net/http"
 	"github.com/gwtony/gapi/log"
-	"github.com/gwtony/gapi/utils"
+	//"github.com/gwtony/gapi/utils"
 	"github.com/gwtony/gapi/api"
 	"github.com/gwtony/gapi/errors"
+	"github.com/gwtony/angela/handler/worker"
+	"github.com/gwtony/angela/handler/msg"
+	//"github.com/gwtony/angela/config"
+	//"github.com/gwtony/angela/mysql"
 )
 
 type JobCreateHandler struct {
-	mc  *MysqlContext
 	log log.Log
 }
 
 type JobCancelHandler struct {
-	mc  *MysqlContext
 	log log.Log
 }
 
+func InitJobCreateHandler(log log.Log) *JobCreateHandler {
+	return &JobCreateHandler{log: log}
+}
+
+func InitJobCancelHandler(log log.Log) *JobCancelHandler {
+	return &JobCancelHandler{log: log}
+}
+
 func (h *JobCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var key string
-	admin := false
+	//var key string
+	//admin := false
 
 	if r.Method != "POST" {
 		api.ReturnError(r, w, errors.Jerror("Method invalid"), errors.BadRequestError, h.log)
@@ -39,7 +49,7 @@ func (h *JobCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	data := &OrchMessage{}
+	data := msg.OrchMessage{}
 
 	err = json.Unmarshal(result, &data)
 	if err != nil {
@@ -64,17 +74,18 @@ func (h *JobCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	admin = true
 	//}
 
-	jobid, _ := utils.NewUUID()
+	//jobid, _ := utils.NewUUID()
 
 	//im := &IdMessage{Jobid: data.Jobid}
 	//imv, _ := json.Marshal(im)
-	go Runjob()
+	go worker.RunJob(data, h.log)
 
-	api.ReturnResponse(r, w, string(imv), h.log)
+	//api.ReturnResponse(r, w, string(imv), h.log)
+	api.ReturnResponse(r, w, "", h.log)
 }
 
 func (h *JobCancelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	admin := false
+	//admin := false
 
 	if r.Method != "POST" {
 		api.ReturnError(r, w, errors.Jerror("Method invalid"), errors.BadRequestError, h.log)
@@ -88,14 +99,14 @@ func (h *JobCancelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	data := &CronOperateMessage{}
+	data := &msg.OrchMessage{}
 	err = json.Unmarshal(result, &data)
 	if err != nil {
 		api.ReturnError(r, w, errors.Jerror("Parse from body failed"), errors.BadRequestError, h.log)
 		return
 	}
 
-	h.log.Info("Cancel record request: (%s) from client: %s", string(result), r.RemoteAddr)
+	h.log.Info("Cancel job request: (%s) from client: %s", string(result), r.RemoteAddr)
 
 	api.ReturnResponse(r, w, "", h.log)
 }

@@ -1,4 +1,4 @@
-package handler
+package variable
 
 const (
 	// VERSION version
@@ -41,4 +41,6 @@ const (
 	ORCH_OPERATE_TYPE       = "exec"
 
 	SUBJOB_PADDING          = "padding"
+	ORCH_RUNTIME_DIR        = "/tmp/orch_run"
+	ORCH_TMP_DIR            = "/tmp/orch_tmp"
 )

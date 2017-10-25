@@ -73,11 +73,17 @@ func (ssh_conf *MakeConfig) connect() (*ssh.Session, error) {
 
 	if pubkey, err := getKeyFile(ssh_conf.Key); err == nil {
 		auths = append(auths, ssh.PublicKeys(pubkey))
+	} else {
+		fmt.Println("get key file err is ", err)
 	}
 
 	config := &ssh.ClientConfig{
 		User: ssh_conf.User,
 		Auth: auths,
+		//HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		//	return nil
+		//},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	client, err := ssh.Dial("tcp", ssh_conf.Server+":"+ssh_conf.Port, config)
