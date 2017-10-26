@@ -1,10 +1,8 @@
 package handler
 
 import (
-	//"sync"
 	"github.com/gwtony/gapi/log"
 	"github.com/gwtony/gapi/api"
-	//"github.com/gwtony/gapi/hserver"
 	"github.com/gwtony/gapi/config"
 
 	//"github.com/gwtony/angela/handler/db"
@@ -12,17 +10,12 @@ import (
 	hh "github.com/gwtony/angela/handler/http_handler"
 	"github.com/gwtony/angela/handler/variable"
 	"github.com/gwtony/angela/handler/worker"
-	//"github.com/gwtony/gapi/errors"
 )
-
-//var DMapLock sync.Mutex
-//var DcronMap map[string]*CronMessage
 
 var AdminToken string
 
 // InitContext inits angela context
 func InitContext(conf *config.Config, log log.Log) error {
-	//var rh *RedisHandler
 	cf := &aconf.AngelaConfig{}
 	err := cf.ParseConfig(conf)
 	if err != nil {
@@ -33,7 +26,7 @@ func InitContext(conf *config.Config, log log.Log) error {
 
 	//err = db.InitMysqlContext(cf.Maddr, cf.Dbname, cf.Dbuser, cf.Dbpwd, log)
 	//if err != nil {
-	//	log.Error("Dcron init mysql context failed")
+	//	log.Error("Angela init mysql context failed")
 	//	return err
 	//}
 	err = worker.InitWorker(cf.SshKey)
