@@ -1,5 +1,7 @@
 # Orchestration service
-Angela is a orchestration service, with http restful api, it run command with ssh.
+Angela is a orchestration service. 
+With http restful api, it runs command with ssh protocol. 
+It just executes command where you want, without records execution result, but it will callback a http url to report result 
 
 ## Config
 
